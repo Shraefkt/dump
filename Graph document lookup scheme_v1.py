@@ -50,7 +50,8 @@ def Search(tk,EDS :bytes):
     else:
         return None
 
-test_ds = [bytes(str(i),'utf-8') for i in range(8,16)]
+test_ds = [bytes(str(i)*100,'utf-8') for i in range(8,16)]
 test = lambda i :Dec(K,Search(Token(K,i),Enc(K,test_ds)))
 for i in range(1,16):
     print(i, test(i))
+print(f"Storage length: {len(Enc(K,test_ds))}")
