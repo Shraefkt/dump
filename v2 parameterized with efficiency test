@@ -76,6 +76,10 @@ for i in range(2**(d-1),2**(d)):
     print(i, test(i))
 et = time.process_time()
 print(f"Storage length: {len(Enc(K,test_ds))}")
+print(f"Average bandwidth/total data sent: {len(Enc(K,test_ds))/n+len(Token(K,i,Enc(K,test_ds)))}")
+
+print(f"Total time: {time.process_time()} seconds")
+print(f"Average query time: {(et-st)/2**d} seconds")
 
 
 print(f"Total time: {time.process_time()} seconds")
