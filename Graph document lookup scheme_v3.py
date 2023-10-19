@@ -3,61 +3,89 @@ from Crypto.Hash import HMAC, SHA256
 from Crypto.Random import get_random_bytes
 import pickle
 import math
+import time
 
-K = get_random_bytes(32)
-def Enc(K,DS :list):
-    SE_K, CHF_K = K[:16], K[16:]
-    EDS = dict()
-    len_DS = len(DS)
-    depth = math.ceil(math.log(len_DS,2)) + 1 # defined as layers of nodes
-    for i in range(pow(2,(depth-1)),pow(2,depth)): #all leaf nodes
-            real_i = i - len_DS
-            IV = get_random_bytes(8)
-            cipher = AES.new(SE_K, AES.MODE_CTR, nonce=IV)
-            C = IV + cipher.encrypt(DS[real_i])
-            hash = HMAC.new(CHF_K, digestmod=SHA256)
-            hash.update(bytes(i))
-            tk = hash.digest()
-            EDS[tk] = C
-    return pickle.dumps(EDS)
+class DocumentLookupScheme:
+    def __init__(self,DS:list):
+        self.DS = DS #document set
+        self.n = len(DS) #num of documents
+        self.dl = len(DS[0]) # document length (fixed)
+        self.d = math.ceil(math.log(self.n,2))+1 # number of layers
+        self.K = get_random_bytes(32) #Key (SE_K + CHF_K)
+        self.SE_K, self.CHF_K = self.K[:16], self.K[16:]
 
-def Token(K,i :int,EDS): #technically doesn't meet the definition
-    SE_K, CHF_K = K[:16], K[16:]
-    depth = math.ceil(math.log(len(EDS), 2)) + 1
-    depth_node = math.floor(math.log(i,2))
-    x_node = depth - depth_node - 1 # depth to leaf layer
-    tk_list = []
-    for tk_i in range(i*pow(2,x_node),(i+1)*pow(2,x_node)): #documents to encrypt
-        hash = HMAC.new(CHF_K, digestmod=SHA256)
-        hash.update(bytes((tk_i)))
+    def Enc(self):
+        EDS = dict()
+        for i in range(2,2**d):  # all nodes
+            hash = HMAC.new(self.CHF_K, digestmod=SHA256)
+            hash.update(bytes(math.floor(i/2)))
+            parent_tk = hash.digest()
+            if parent_tk not in EDS.keys():
+                EDS[parent_tk] = []
+            if i < 2**(d-1): # normal node
+                hash = HMAC.new(self.CHF_K, digestmod=SHA256)
+                hash.update(bytes(i))
+                tk = hash.digest()
+                EDS[parent_tk].append(tk)
+            elif i < 2**(d-1) + n:# real leaf node
+                real_i = i - 2 ** d
+                IV = get_random_bytes(8)
+                cipher = AES.new(self.SE_K, AES.MODE_CTR, nonce=IV)
+                C = IV + cipher.encrypt(self.DS[real_i])
+                EDS[parent_tk].append(C)
+            else: # padded leaf node
+                C = '0' * 16
+                EDS[parent_tk].append(C)
+        self.EDS = EDS
+        del self.DS
+
+    def Token(self,i: int):
+        hash = HMAC.new(self.CHF_K, digestmod=SHA256)
+        hash.update(bytes((i)))
         tk = hash.digest()
-        tk_list.append(tk)
-    return pickle.dumps(tk_list)
+        return(tk)
+    def Search(self,tk):
+        CS = []
+        if tk not in self.EDS.keys():
+            return [tk]
+        tk_to_search_or_C = self.EDS[tk]
+        if type(tk_to_search_or_C) is list:
+            CS += self.Search(tk_to_search_or_C[0])
+            CS += self.Search(tk_to_search_or_C[1])
+        return CS
+    def Dec(self,CS):
+        DS = []
+        for C in CS:
+            IV, SE_C = C[:8], C[8:]
+            if IV == '00000000':
+                DS.append(None)
+            else:
+                cipher = AES.new(self.SE_K, AES.MODE_CTR, nonce=IV)
+                DS.append(cipher.decrypt(SE_C))
+        return DS
 
-def Dec(K,C_list :list):
-    if C_list is None:
-        return None
-    SE_K, CHF_K = K[:16], K[16:]
-    D_list = []
-    for C in C_list:
-        IV, SE_C = C[:8], C[8:]
-        cipher = AES.new(SE_K, AES.MODE_CTR, nonce=IV)
-        D_list.append(cipher.decrypt(SE_C))
-    return D_list
+n = int(input("insert number of documents: "))
+dl = int(input("insert length of document: "))
+d = math.ceil(math.log(n,2))+1 # number of layers
 
-def Search(tk_list: bytes,EDS :bytes):
-    tk_list = pickle.loads(tk_list)
-    EDS = pickle.loads(EDS)
-    D_list = []
-    for tk in tk_list:
-        if tk in EDS.keys():
-            D_list.append(EDS[tk])
-        else:
-            pass
-    return D_list
+test_ds = [bytes(str(i-2**(d-1)+1)*dl,'utf-8') for i in range(2**(d-1),2**(d))]
 
-test_ds = [bytes(str(i)*100,'utf-8') for i in range(8,16)]
-test = lambda i :Dec(K,Search(Token(K,i,test_ds),Enc(K,test_ds)))
-for i in range(1,16):
-    print(i, test(i))
-print(f"Storage length: {len(Enc(K,test_ds))}")
+st = time.process_time()
+
+scheme = DocumentLookupScheme(test_ds)
+scheme.Enc()
+test = lambda i :scheme.Dec(scheme.Search(scheme.Token(i)))
+total_bandwidth = 0
+for i in range(1,2**(d-1)): # can't query leaf nodes
+    token = scheme.Token(i)
+    server_response = scheme.Search(token)
+    total_bandwidth += len(pickle.dumps(server_response)) + len(token)
+    print(i,scheme.Dec(server_response))
+
+et = time.process_time()
+print(f"Storage length: {len(pickle.dumps(scheme.EDS))}")
+print(f"Total data sent: {total_bandwidth}")
+print(f"Average data sent: {total_bandwidth/2**(d-1)}")
+
+print(f"Total time: {time.process_time()} seconds")
+print(f"Average query time: {(et-st)/2**(d-1)} seconds")
