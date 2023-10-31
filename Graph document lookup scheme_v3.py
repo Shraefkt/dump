@@ -26,7 +26,8 @@ class DocumentLookupScheme:
                 hash = HMAC.new(self.CHF_K, digestmod=SHA256)
                 hash.update(bytes(i))
                 tk = hash.digest()
-                EDS[parent_tk].append(tk)
+                EDS[parent_tk].append(
+                    tk)
             elif i < 2**(d-1) + n:# real leaf node
                 real_i = i - 2 ** d
                 IV = get_random_bytes(8)
