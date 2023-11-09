@@ -11,7 +11,6 @@ def get_next_node(current_node):
     layer = current_node[1]-current_node[0] + 1
     return (current_node[1]+1, current_node[1] + layer)
 
-
 def get_parent_node(current_node,b): #current_node [x,y]
     next_node = get_next_node(current_node)
     if next_node[1] > b : return current_node
@@ -19,4 +18,5 @@ def get_parent_node(current_node,b): #current_node [x,y]
         return get_parent_node((current_node[0],next_node[1]),b)
     return current_node
 
-calculate_nodes(3,2043)
+calculate_nodes(32,94)
+
