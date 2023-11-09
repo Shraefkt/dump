@@ -41,10 +41,12 @@ class DocumentLookupSchemeClient:
         del self.DS
         return pickle.dumps(EDS)
 
-    def Token(self,i: int):
+    def Token(self,i):
         return self.get_hash(i)
 
     def over_cover(self,a,b):
+        if a > self.n or b > self.n or a > b or a < 0 :
+            return None
         a = a + 2 ** (self.d - 1) - 1
         b = b + 2 ** (self.d - 1) - 1
         return self.Token(a >> len(bin(a ^ b)) - 2)
@@ -76,6 +78,8 @@ class DocumentLookupSchemeServer:
         return hash.digest()
 
     def Search(self,tk):
+        if tk is None:
+            return pickle.dumps(None)
         return pickle.dumps(self.recurse(self.depth, [tk]))
 
     def recurse(self,depth,lis): #pickle eveyrthing up
@@ -86,13 +90,11 @@ class DocumentLookupSchemeServer:
         else:
             return self.recurse(depth - 1, [f(l) for l in lis for f in (lambda x: self.CHF(x, 0), lambda x: self.CHF(x, 1))])
 
-n = 16 #int(input("insert number of documents: "))
-dl = 5 #int(input("insert length of document: "))
+n = int(input("insert number of documents: "))
+dl = int(input("insert length of document: "))
 d = math.ceil(math.log(n,2))+1 # number of layers
 
-test_ds = [bytes(str(i-2**(d-1)+1)*dl,'utf-8') for i in range(2**(d-1),2**(d-1)+n)]
-
-st = time.process_time()
+test_ds = [bytes((str(i-2**(d-1)+1)*dl)[:dl],'utf-8') for i in range(2**(d-1),2**(d-1)+n)]
 
 client = DocumentLookupSchemeClient(test_ds)
 server = DocumentLookupSchemeServer(client.Enc(),d)
