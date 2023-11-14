@@ -1,0 +1,25 @@
+import math
+def over_cover_node(a: int, b: int, n:int):
+    if a > n or b > n or a > b or a < 0:
+        return None
+    depth = math.ceil(math.log(n,2))+1
+    a = a + 2 ** (depth - 1) - 1
+    b = b + 2 ** (depth - 1) - 1
+    return a >> len(bin(a ^ b)) - 2
+
+def overhead(a,b,n,debug=True):
+    node = over_cover_node(a,b,n)
+    depth = math.ceil(math.log(n,2))+1
+    depth_node = math.floor(math.log(node, 2)) + 1
+    x_node = depth - depth_node  # depth to leaf layer
+    min = node*(2**(x_node))
+    max = (node+1)*(2**x_node) - 1
+    actual_a = 2 ** (depth-1) + a - 1
+    actual_b = 2 ** (depth-1) + b - 1
+    overhead_number = max-actual_b+actual_a-min
+    if debug:
+        print(f"Actual a:{actual_a}, Actual b:{actual_b}")
+        print(f"Node: {node}")
+        print(f"Min descendant:{min}, max descendant: {max}")
+        print(f"Overhead: {overhead_number}")
+    return overhead_number
