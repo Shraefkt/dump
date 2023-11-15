@@ -1,55 +1,58 @@
 import math
 import numpy as np
 import matplotlib.pyplot as plt
-def over_cover_node(a: int, b: int, n:int):
-    if a > n or b > n or a > b or a < 0:
-        return None
-    depth = math.ceil(math.log(n,2))+1
-    a = a + 2 ** (depth - 1) - 1
-    b = b + 2 ** (depth - 1) - 1
-    return a >> len(bin(a ^ b)) - 2
-def overhead(a,b,n,debug=True):
+from n_cover import calc_n_cover,calc_1_cover
+'''
+
+'''
+def overhead(a,b,n_nodes,n_cover,debug=True): #n_node -> leaf nodes
     if a == b:
         return 0
-    node = over_cover_node(a,b,n)
-    depth = math.ceil(math.log(n,2))+1
-    depth_node = math.floor(math.log(node, 2)) + 1
-    x_node = depth - depth_node  # depth to leaf layer
-    min = node*(2**(x_node))
-    max = (node+1)*(2**x_node) - 1
-    actual_a = 2 ** (depth-1) + a - 1
-    actual_b = 2 ** (depth-1) + b - 1
+    depth = math.ceil(math.log(n_nodes, 2)) + 1
+    actual_a = 2 ** (depth - 1) + a - 1
+    actual_b = 2 ** (depth - 1) + b - 1
+    nodes = calc_n_cover(actual_a, actual_b, n_cover)
+    x_node_min = depth - math.floor(math.log(nodes[0], 2)) - 1  # depth to leaf layer
+    x_node_max = depth - math.floor(math.log(nodes[-1], 2))  - 1 # depth to leaf layer
+    min = nodes[0]*(2**(x_node_min))
+    max = (nodes[-1]+1)*(2**x_node_max) - 1
     overhead_number = max-actual_b+actual_a-min
-    overhead_percentage = overhead_number/(max-min)
+    overhead_percentage = overhead_number/(actual_b-actual_a)
     if debug:
         print(f"Actual a:{actual_a}, Actual b:{actual_b}")
-        print(f"Node: {node}")
+        print(f"Nodes: {nodes}")
+        print(f"depth: {depth}, x_min: {x_node_min}, x_max :{x_node_max}")
         print(f"Min descendant:{min}, max descendant: {max}")
         print(f"Overhead: {overhead_number}")
         print(f"Percentage: {overhead_percentage}")
     return overhead_percentage
-
-def get_average_overhead(n):
+def get_average_overhead(n_nodes,n_cover):
     counter = 0
-    for b in range(n):
-        overhead_total = 0
-        for a in range(b):
-            over = overhead(a+1,b+1,n,debug=False)
+    overhead_total = 0
+    for b in range(1,n_nodes+1):
+        for a in range(1,b):
+            over = overhead(a, b, n_nodes, n_cover, debug=False)
             overhead_total += over
             counter += 1
     return overhead_total/counter
-N_array = []
-Ave_overhead_array = []
-for i in range(2,100):
-    N_array.append(i)
-    Ave_overhead_array.append(get_average_overhead(i) * 100)
-print(Ave_overhead_array)
+def plot(n_cover,n_times):
+    Number_of_nodes_array = []
+    Ave_overhead_array = []
+    for i in range(2, n_times):
+        Number_of_nodes_array.append(i)
+        Ave_overhead_array.append(get_average_overhead(i, n_cover) * 100)
+    Number_of_nodes_array = np.array(Number_of_nodes_array)
+    Ave_overhead_array = np.array(Ave_overhead_array)
+    plt.plot(Number_of_nodes_array, Ave_overhead_array, label=f"{int(n_cover)}-cover")
 
-N_array = np.array(N_array)
-Ave_overhead_array = np.array(Ave_overhead_array)
-
-plt.xlabel("N")
+plt.xlabel("Number of nodes")
 plt.ylabel("Average overhead percentage")
+times = 100
+plot(1,times)
+plot(2,times)
+plot(3,times)
+plot(4,times)
+plot(5,times)
 
-plt.plot(N_array, Ave_overhead_array)
+leg = plt.legend(loc='upper center')
 plt.show()
