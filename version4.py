@@ -35,27 +35,33 @@ class DocumentLookupSchemeClient:
     def Enc(self):
         EDS = dict()
         for i in range(self.n):  # no of documents
-                IV = get_random_bytes(8)
-                cipher = AES.new(self.SE_K, AES.MODE_CTR, nonce=IV)
-                EDS[self.get_hash(2**(d-1) + i)] = IV + cipher.encrypt(self.DS[i] + bytes(str(i),'utf-8')) #maybe add padding later
+            IV = get_random_bytes(8)
+            cipher = AES.new(self.SE_K, AES.MODE_CTR, nonce=IV)
+            EDS[self.get_hash(2**(d-1) + i)] = IV + cipher.encrypt(self.DS[i] + bytes(str(i),'utf-8')) #maybe add padding later
         del self.DS
         return pickle.dumps(EDS)
 
     def Token(self,i):
         return self.get_hash(i)
 
-    def over_cover(self,a,b):
+    def over_cover(self,a,b,debug=False):
         if a > self.n or b > self.n or a > b or a < 0 :
             return None
         a = a + 2 ** (self.d - 1) - 1
         b = b + 2 ** (self.d - 1) - 1
-        return self.Token(a >> len(bin(a ^ b)) - 2)
+        shift_length = len("{:b}".format(a^b)) if a!=b else 0
+        node = a >> shift_length
+        if debug:
+            print(f"Node: {node}")
+            print(f"a: {a}, b: {b}, n: {self.n}")
+        return self.Token(node)
 
-    def Dec(self,CS,a,b):
+    def Dec(self,CS,a,b,debug=False):
         DS = []
-        if pickle.loads(CS) == None:
+        CS = pickle.loads(CS)
+        if CS == None:
             return None
-        for C in pickle.loads(CS):
+        for C in CS:
             if C is None:
                 return None #returned in order, so decryption can just stop
             IV, SE_C = C[:8], C[8:]
@@ -65,6 +71,9 @@ class DocumentLookupSchemeClient:
             D_n,n = D_m[:self.dl], D_m[self.dl:]
             if a <= int(n)+1 <= b:
                 DS.append(D_n)
+        if debug:
+            print(f"{CS}")
+            print(f"{DS}")
         return DS
 
 class DocumentLookupSchemeServer:
@@ -82,7 +91,7 @@ class DocumentLookupSchemeServer:
             return pickle.dumps(None)
         return pickle.dumps(self.recurse(self.depth, [tk]))
 
-    def recurse(self,depth,lis): #pickle eveyrthing up
+    def recurse(self,depth,lis):
         if lis[0] in self.EDS.keys(): # leaf nodes reached
                 return [self.EDS[l] for l in lis if l in self.EDS.keys()]
         if depth == 0:
