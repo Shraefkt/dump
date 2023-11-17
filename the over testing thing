@@ -1,21 +1,21 @@
 import math
 import numpy as np
 import matplotlib.pyplot as plt
-from n_cover import calc_n_cover,calc_1_cover
-'''
-
-'''
+from n_cover import calc_n_cover
 def overhead(a,b,n_nodes,n_cover,debug=True): #n_node -> leaf nodes
     if a == b:
         return 0
     depth = math.ceil(math.log(n_nodes, 2)) + 1
     actual_a = 2 ** (depth - 1) + a - 1
     actual_b = 2 ** (depth - 1) + b - 1
+    actual_n_nodes = 2 ** (depth - 1) + n_nodes - 1
     nodes = calc_n_cover(actual_a, actual_b, n_cover)
-    x_node_min = depth - math.floor(math.log(nodes[0], 2)) - 1  # depth to leaf layer
-    x_node_max = depth - math.floor(math.log(nodes[-1], 2))  - 1 # depth to leaf layer
+    x_node_min = depth - math.floor(math.log(nodes[0], 2)) - 1  # depth to leaf layer/ height
+    x_node_max = depth - math.floor(math.log(nodes[-1], 2)) - 1 # depth to leaf layer
     min = nodes[0]*(2**(x_node_min))
     max = (nodes[-1]+1)*(2**x_node_max) - 1
+    if max > actual_n_nodes:
+        max = actual_n_nodes
     overhead_number = max-actual_b+actual_a-min
     overhead_percentage = overhead_number/(actual_b-actual_a)
     if debug:
