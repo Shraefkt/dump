@@ -1,0 +1,120 @@
+from utils import *
+
+'''def calc_n_cover(a :int, b: int, n: int,debug=False):
+    # get minimal cover with unlimited nodes
+    minimized_range = calc_min_cover(a,b)
+
+    #base cases
+    if len(minimized_range) <= n:
+        return minimized_range
+    # recursive case
+    minimized_range = minimize_nodes(minimized_range,n)
+    if debug:
+        print(f"#1 Minimized range: {minimized_range}")
+    return minimized_range'''
+
+
+def calc_min_cover(a, b) -> list:
+    # base cases
+    if a == b:
+        return [a]
+    if b - a == 1 and a % 2 == 1:
+        return [a, b]
+
+    # recursive case
+    min_cover = []
+    if a % 2 == 1:
+        min_cover.append(a)
+    min_cover += calc_min_cover((a+1) // 2, (b-1) // 2)  # recursive call for solving smaller problem
+    if b % 2 == 0:
+        min_cover.append(b)
+    return min_cover
+
+
+def edge_case_tester(minimized_over_cover_nodes: list, depth: int, a, b):
+    if len(minimized_over_cover_nodes) > 2:
+        if math.floor(minimized_over_cover_nodes[0] / 2) * 2 + 1 == minimized_over_cover_nodes[1]:
+            new = math.floor(minimized_over_cover_nodes[0] / 2) * 2
+            minimized_over_cover_nodes.pop(0)
+            minimized_over_cover_nodes.pop(0)
+            minimized_over_cover_nodes = [new] + minimized_over_cover_nodes
+        if math.floor(minimized_over_cover_nodes[-2] / 2) * 2 + 1 == minimized_over_cover_nodes[-1]:
+            new = math.floor(minimized_over_cover_nodes[-2] / 2) * 2
+            minimized_over_cover_nodes.pop()
+            minimized_over_cover_nodes.pop()
+            minimized_over_cover_nodes = minimized_over_cover_nodes + [new]
+    ordered_minimized_range = [depth - math.floor(math.log(i, 2)) - 1 for i in minimized_over_cover_nodes]
+    for i in ordered_minimized_range:
+        if 2 ** i > b - a + 1:
+            i = i - 1
+            ordered_minimized_range[0] = i
+            ordered_minimized_range = [i] + ordered_minimized_range
+    return ordered_minimized_range
+
+
+def calc_n_cover(a: int, b: int, n_cover: int, n_nodes: int, depth: int) -> list:
+    # get minimal cover with unlimited nodes
+    check_same_layer(a, b)
+    minimized_over_cover_nodes = calc_min_cover(a, b)
+    #base case
+
+    if len(minimized_over_cover_nodes) <= n_cover:
+        minimized_over_cover_nodes = sorted(minimized_over_cover_nodes)
+        ordered_minimized_range = edge_case_tester(minimized_over_cover_nodes, depth, a, b)
+        return sorted(ordered_minimized_range, reverse=True)
+    #recursive case
+    minimized_over_cover_nodes = minimize_over_cover_nodes(minimized_over_cover_nodes, n_cover, n_nodes, a, b)
+    minimized_over_cover_nodes = sorted(minimized_over_cover_nodes)
+    ordered_minimized_range = edge_case_tester(minimized_over_cover_nodes, depth, a, b)
+    return sorted(ordered_minimized_range, reverse=True)
+
+
+def minimize_over_cover_nodes(minimized_over_cover_nodes: list, n_cover: int, n_nodes: int, a, b):
+    if len(minimized_over_cover_nodes) <= n_cover:
+        return minimized_over_cover_nodes
+
+    left_merge_result = get_merge_result(minimized_over_cover_nodes[0], minimized_over_cover_nodes[1])
+    right_merge_result = get_merge_result(minimized_over_cover_nodes[-1], minimized_over_cover_nodes[-2])
+    winning_side = 0  # 0-> left, 1-> right
+
+    left_win_result = minimized_over_cover_nodes.copy()
+    left_win_result.pop(0)
+    left_win_result.pop(0)
+    left_win_result.insert(0, left_merge_result)
+
+    right_win_result = minimized_over_cover_nodes.copy()
+    right_win_result.pop()
+    right_win_result.pop()
+    right_win_result.append(right_merge_result)
+    overhead_left = get_number_overhead_nodes(a, b, n_nodes, overcover_nodes=left_win_result)
+    overhead_right = get_number_overhead_nodes(a, b, n_nodes, overcover_nodes=right_win_result)
+    if overhead_left < overhead_right:
+        winning_side = 0
+    elif overhead_right < overhead_left:
+        winning_side = 1
+    if winning_side == 0:
+        minimized_over_cover_nodes = left_win_result.copy()
+    elif winning_side == 1:
+        minimized_over_cover_nodes = right_win_result.copy()
+    minimized_over_cover_nodes = minimize_over_cover_nodes(minimized_over_cover_nodes, n_cover, n_nodes, a, b)
+    return minimize_over_cover_nodes(minimized_over_cover_nodes, n_cover, n_nodes, a, b)
+
+
+def universal_cover_finder(range_of_nodes: int, n: int):
+    depth = math.ceil(math.log2(range_of_nodes)) + 2
+    universal_cover = [0]*n
+    for a in range(2**(depth-1), 2**depth - range_of_nodes):
+        b = a + range_of_nodes - 1
+        cover = calc_n_cover(a, b, n, 2**(depth-1), depth)
+        if len(cover) < n:
+            for i in range(n-len(cover)):
+                cover[-1] = cover[-1] - 1
+                cover = cover + [cover[-1]]
+        for i in range(n):
+            if cover[i] > universal_cover[i]:
+                universal_cover[i] = cover[i]
+    return universal_cover
+
+
+for i in range(1,101):
+    print(i,universal_cover_finder(i,3))
