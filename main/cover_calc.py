@@ -48,14 +48,17 @@ def minimize_overcover_nodes(minimized_overcover_nodes: list, n_cover: int, n_no
     right_win_result.pop()
     right_win_result.pop()
     right_win_result.append(right_merge_result)
-    overhead_left = get_number_overhead_nodes(a,b,n_nodes,overcover_nodes=left_win_result)
-    overhead_right = get_number_overhead_nodes(a,b,n_nodes,overcover_nodes=right_win_result)
-    if overhead_left < overhead_right:
+
+    if get_depth(left_merge_result) > get_depth(right_merge_result):
         winning_side = 0
-    elif overhead_right < overhead_left:
+    elif get_depth(right_merge_result) > get_depth(left_merge_result):
         winning_side = 1
-    print(overhead_left,overhead_right)
-    print(winning_side,minimized_overcover_nodes)
+    else:
+        if get_number_overhead_nodes(a,b,n_nodes,overcover_nodes=left_win_result) >= get_number_overhead_nodes(a,b,n_nodes,overcover_nodes=right_win_result):
+            winning_side = 0
+        else:
+            winning_side = 1
+
     if winning_side == 0:
         minimized_overcover_nodes = left_win_result.copy()
     elif winning_side == 1:
@@ -63,12 +66,12 @@ def minimize_overcover_nodes(minimized_overcover_nodes: list, n_cover: int, n_no
     return minimize_overcover_nodes(minimized_overcover_nodes, n_cover, n_nodes,a,b)
 
 if __name__ == '__main__':
-    n_nodes = 31 #int(input("Number of documents:"))
+    n_nodes = int(input("Number of documents:"))
     n_nodes = 2 ** get_depth(n_nodes) + n_nodes
-    a = 37#convert_to_index_number(int(input("Input lower limit:")),n_nodes)
-    b = 56#convert_to_index_number(int(input("Input upper limit:")),n_nodes)
-    n_cover = 3#int(input("N-cover: "))
-    overcover_nodes = calc_n_cover(a,b,n_cover,n_nodes)
+    a = convert_to_index_number(int(input("Input lower limit:")),n_nodes)
+    b = convert_to_index_number(int(input("Input upper limit:")),n_nodes)
+    n_cover = int(input("N-cover: "))
+    overcover_nodes = [4,20,84]#calc_n_cover(a,b,n_cover,n_nodes)
     color_dict = {}
     depth = math.ceil(math.log(n_nodes, 2))
     x_node_min = depth - math.floor(math.log(overcover_nodes[0], 2)) - 1  # depth to leaf layer/ height
