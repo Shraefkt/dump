@@ -54,8 +54,6 @@ def minimize_overcover_nodes(minimized_overcover_nodes: list, n_cover: int, n_no
         winning_side = 0
     elif overhead_right < overhead_left:
         winning_side = 1
-    print(overhead_left,overhead_right)
-    print(winning_side,minimized_overcover_nodes)
     if winning_side == 0:
         minimized_overcover_nodes = left_win_result.copy()
     elif winning_side == 1:
