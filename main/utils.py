@@ -27,17 +27,31 @@ def get_number_overhead_nodes(a,b,n,overcover_nodes: list,debug=False) -> int:
         return 0
     check_same_layer(a,b)
     depth = get_depth(n)
-    x_overcover_node_min = get_height(overcover_nodes[0],n)
-    x_overcover_node_max = get_height(overcover_nodes[-1],n)
-    min_descendant = overcover_nodes[0] * (2 ** (x_overcover_node_min))
-    max_descendant = (overcover_nodes[-1] + 1) * (2 ** x_overcover_node_max) - 1
-    if max_descendant > n:
-        max_descendant = n
-    overhead_number = max_descendant - b + a - min_descendant
+    overall_min_descendant = get_min_descendant(overcover_nodes[0], n)
+    overall_max_descendant = get_max_descendant(overcover_nodes[-1], n)
+    for node in overcover_nodes:
+        min_descendant = get_min_descendant(node,n)
+        max_descendant = get_max_descendant(node,n)
+        if min_descendant < overall_min_descendant:
+            overall_min_descendant = min_descendant
+        if max_descendant > overall_max_descendant:
+            overall_max_descendant = max_descendant
+    if overall_max_descendant > n:
+        overall_max_descendant = n
+    overhead_number = overall_max_descendant - b + a - overall_min_descendant
     if debug:
         print(f"Actual a:{a}, Actual b:{b}")
         print(f"Overcover Nodes: {overcover_nodes}")
-        print(f"depth: {depth}, x_min: {x_overcover_node_min}, x_max :{x_overcover_node_max}")
-        print(f"Min descendant:{min_descendant}, max descendant: {max_descendant}")
+        print(f"Min descendant:{overall_min_descendant}, max descendant: {overall_max_descendant}")
         print(f"Overhead: {overhead_number}")
     return overhead_number
+
+def get_min_descendant(i,total_nodes):
+    x_overcover_node_min = get_height(i, total_nodes)
+    min_descendant = i * (2 ** (x_overcover_node_min))
+    return min_descendant
+
+def get_max_descendant(i,total_nodes):
+    x_overcover_node_max = get_height(i, total_nodes)
+    max_descendant = (i + 1) * (2 ** x_overcover_node_max) - 1
+    return max_descendant
