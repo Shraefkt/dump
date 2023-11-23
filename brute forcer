@@ -1,0 +1,111 @@
+from utils import *
+from itertools import product
+import pickle
+import pprint
+
+def take_first(elem):
+    return elem[0]
+def return_continuity(descendant_ranges,n_cover):
+    for i in range(n_cover- 1):
+        if descendant_ranges[i][1] != descendant_ranges[i + 1][0] - 1:
+            return False
+    return True
+def return_volume_from_height_profile(height_profile):
+    v = 0
+    for h in height_profile:
+        v += 2 ** h
+    return v
+def get_height_profile(s,depth,n_cover = 3,debug=True):
+    min_overcover_node = 1
+    total_nodes = max_overcover_node = 2 ** depth - 1
+    min_start_range_node = 2 ** (depth - 1)
+    max_start_range_node = 2 ** (depth) - s # the starting node for iteration !!!
+    range_dictionary = {} # {(a,b):[over_nodes_list]}
+    height_dictionary = {} # {(a,b):[heights_list]}
+    for x in range(min_start_range_node, max_start_range_node + 1):
+        range_dictionary[(x,x+s-1)] = []
+        height_dictionary[(x,x+s-1)] = []
+    #gen
+    numbers = list(range(min_overcover_node, max_overcover_node + 1))
+    for overcover_nodes in product(numbers, repeat=n_cover):
+        #check validity
+        overcover_nodes = sorted(overcover_nodes)
+        #1. overlap
+        if len(set(overcover_nodes)) != n_cover:
+            continue
+        #2. continuity/overlap
+        descendant_ranges = [(get_min_descendant(x,total_nodes),get_max_descendant(x,total_nodes)) for x in overcover_nodes]
+        descendant_ranges = sorted(descendant_ranges,key=take_first)
+        if return_continuity(descendant_ranges,n_cover) == False:
+            continue
+        #3. check covers volume; needed so less calculations
+        if descendant_ranges[n_cover-1][1] - descendant_ranges[0][0] + 1 < s:
+            continue
+        #4. put in range/height dictionaries if it can cover range
+        for z in range(min_start_range_node, max_start_range_node + 1):
+            if descendant_ranges[n_cover-1][1] >= (z + s - 1) and descendant_ranges[0][0] <= z:
+                if overcover_nodes not in range_dictionary[(z, z + s - 1)]:
+                    range_dictionary[(z, z + s - 1)].append(overcover_nodes)
+                heights = tuple(sorted([get_height(n,total_nodes) for n in overcover_nodes]))
+                if heights not in height_dictionary[(z, z + s - 1)]:
+                    height_dictionary[(z, z + s - 1)].append(heights)
+        if debug:
+            print(f"[over_covernodes]:{overcover_nodes}")
+            print(f"Descendant ranges: {descendant_ranges}")
+    # check if profile is universal profile by seeing if it covers all ranges
+    validation_profile_dict = {}
+    for z in range(min_start_range_node, max_start_range_node + 1):
+        for prof in height_dictionary[(z, z + s - 1)]:
+            if prof in validation_profile_dict.keys():
+                validation_profile_dict[prof] += 1
+            else:
+                validation_profile_dict[prof] = 1
+    range_dictionary.clear()
+    height_dictionary.clear()
+    universal_profiles = []
+    for prof in validation_profile_dict.keys():
+        if validation_profile_dict[prof] == (max_start_range_node - min_start_range_node + 1):
+            universal_profiles.append(prof)
+    #find best universal profile, by total height then volume
+    validation_profile_dict.clear()
+    actual_best_profile = universal_profiles[0]
+    best_volume = return_volume_from_height_profile(universal_profiles[0])
+    for prof in universal_profiles:
+            volume = return_volume_from_height_profile(prof)
+            if volume < best_volume:
+                actual_best_profile = prof
+    universal_profiles.clear()
+    print(s,actual_best_profile)
+    return actual_best_profile
+
+if __name__ ==  "__main__":
+    best_profiles = {}
+    n_cover = 4
+    current_s = 1
+    try:
+        with open(f"{str(n_cover)}-cover","rb") as f:
+            best_profiles= pickle.loads(f.read())
+            current_s = max(best_profiles.keys())
+    except:
+        with open(f"{str(n_cover)}-cover","wb") as f:
+            pass
+    print("N-cover: ",n_cover)
+    print("S: ",current_s)
+    print("Profiles:")
+    pprint.pprint(best_profiles)
+
+    if current_s == 1:
+        height_profile = get_height_profile(current_s, 3, n_cover=n_cover, debug=False)
+        volume = return_volume_from_height_profile(height_profile)
+        overhead_percentage = (volume-current_s) / current_s
+        best_profiles[current_s] = [height_profile,volume,overhead_percentage]
+        current_s += 1
+    while True:
+        print("S: ", current_s)
+        height_profile =get_height_profile(current_s, get_depth(current_s) + 1, n_cover=n_cover, debug=False)
+        volume = return_volume_from_height_profile(height_profile)
+        overhead_percentage = (volume - current_s) / current_s
+        best_profiles[current_s] = [height_profile, volume,overhead_percentage]
+        current_s += 1
+        with open(f"{str(n_cover)}-cover","wb") as f:
+            pickle.dump(best_profiles,f)
