@@ -1,0 +1,91 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from utils import *
+from bruteforcer import get_height_profile
+import re
+
+
+
+def overhead(n_nodes,universal_cover):   #n_node -> leaf nodes
+    cover_ranges = [2**i for i in universal_cover]
+    overhead_number = sum(cover_ranges) - n_nodes
+    overhead_percentage = overhead_number*100/n_nodes
+    return overhead_percentage
+
+def researcher_formula(n_nodes):
+    n_nodes = n_nodes -2
+    L = len(bin(n_nodes)) -3
+    s = len(bin(n_nodes ^ 2**L)) -3
+    last = max(L-1,s+1)
+    universal_cover = [L,s,last]
+    return universal_cover
+
+def our_formula(n_nodes:int,n_cover):
+    if n_nodes <= 8:
+        universal_cover = get_height_profile(n_nodes, get_depth(n_nodes)+1,n_cover, debug=False)
+        return universal_cover
+    if n_nodes%2 == 0:
+        n_nodes = n_nodes +1
+    n_nodes = list(bin(n_nodes))
+    n_nodes.pop(0)
+    n_nodes.pop(0)
+    n_nodes = ''.join(str(i) for i in n_nodes)
+    position_one = [m.start() for m in re.finditer('1',n_nodes)]
+    position_zero = [m.start() for m in re.finditer('0',n_nodes)]
+    position_one = [len(n_nodes)-i-1 for i in position_one]
+    position_zero = [len(n_nodes)-i-1 for i in position_zero]
+    if len(position_one) > n_cover:
+        for i in range(len(position_one)-n_cover):
+            replacement = position_one[-2] +1
+            position_one.pop()
+            position_one.pop()
+            position_one.append(replacement)
+    if len(position_one) < n_cover:
+        for i in range(n_cover-len(position_one)):
+            duplicated = position_one[0] -1
+            position_one.pop(0)
+            position_one = [duplicated] + [duplicated] + position_one
+    position_zero = [x for x in position_zero if x not in position_one]
+    universal_cover = zero_chain(position_zero,position_one)
+    return universal_cover
+
+def zero_chain(position_zero,position_one):
+    for i in range(len(position_one)):
+        if position_one[i] +1 in position_zero:
+            position_one[i] = position_one[i] +1
+            position_zero.pop(position_zero.index(position_one[i]))
+            return zero_chain(position_zero,position_one)
+    return position_one
+
+def plot_researchers(n_nodes):
+    Number_of_nodes_array = []
+    Ave_overhead_array = []
+    for i in range(3, n_nodes):
+        Number_of_nodes_array.append(i)
+        Ave_overhead_array.append(overhead(i,researcher_formula(i)))
+    Number_of_nodes_array = np.array(Number_of_nodes_array)
+    Ave_overhead_array = np.array(Ave_overhead_array)
+    plt.plot(Number_of_nodes_array, Ave_overhead_array, label=f"researcher-3-cover")
+
+def plot_ours(n_nodes:int,n_cover):
+    Number_of_nodes_array = []
+    Ave_overhead_array = []
+    for i in range(12, n_nodes):
+        Number_of_nodes_array.append(i)
+        Ave_overhead_array.append(overhead(i, our_formula(i,n_cover)))
+    Number_of_nodes_array = np.array(Number_of_nodes_array)
+    Ave_overhead_array = np.array(Ave_overhead_array)
+    plt.plot(Number_of_nodes_array, Ave_overhead_array, label=f"our-{int(n_cover)}-cover")
+
+
+plt.xlabel("Size of range query")
+plt.ylabel("Average overhead percentage")
+times = 500
+
+#plot_researchers(times)
+plot_ours(times,3)
+plot_ours(times,4)
+plot_ours(times,5)
+
+leg = plt.legend(loc='upper center')
+plt.show()
