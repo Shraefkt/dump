@@ -1,0 +1,33 @@
+from utils import *
+from itertools import product
+import pickle
+import pprint
+
+if __name__ ==  "__main__":
+    best_profiles = {}
+    n_cover = 4
+    try:
+        with open(f"{str(n_cover)}-cover","rb") as f:
+            best_profiles= pickle.loads(f.read())
+    except:
+        with open(f"{str(n_cover)}-cover","wb") as f:
+            pass
+    print("N-cover: ",n_cover)
+    print("Profiles:")
+    pprint.pprint(best_profiles)
+    current_s = int(input('s to input'))
+
+
+    while True:
+        print("S: ", current_s)
+        height_profile = input('height profile')
+        height_profile = height_profile.split()
+        for i in range(len(height_profile)):
+            height_profile[i] = int(height_profile[i])
+        volume = return_volume_from_height_profile(height_profile)
+        overhead_percentage = (volume - current_s) / current_s
+        best_profiles[current_s] = [height_profile, volume,overhead_percentage]
+        print(best_profiles[current_s])
+        current_s += 1
+        with open(f"{str(n_cover)}-cover","wb") as f:
+            pickle.dump(best_profiles,f)
