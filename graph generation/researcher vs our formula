@@ -21,7 +21,7 @@ def researcher_formula(n_nodes):
     return universal_cover
 
 def our_formula(n_nodes:int,n_cover):
-    if n_nodes <= 8:
+    if n_nodes <= 2**(n_cover-1):
         universal_cover = get_height_profile(n_nodes, get_depth(n_nodes)+1,n_cover, debug=False)
         return universal_cover
     if n_nodes%2 == 0:
