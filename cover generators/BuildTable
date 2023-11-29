@@ -1,0 +1,99 @@
+'''
+T[a,b,c,e] c-cover of a,b, 2 ** d <= a <= b < 2 ** (d+1) with exactly e overhead with all overhead on the left, Null if none exists
+
+Initialization
+set c=1 for all a,b,2 ** d <= a < b < 2 ** (d+1) given depth and the error for each case to {n}, n is the height of the single cover node.
+Set all other T[a,b,1,e] to Null
+
+BuildTable(T,c,d), # T[*,*,c,*] from all the T[*,*,c-1,*]
+For all existing entries of T[a,b,c-1,e], 2 ** (d-1) <= a <= b <  (2 ** d)-1
+x = b + 1
+	For all n, y = x + 2 ** n, y <= (2 ** d)-1:
+		New_node = y / n
+		If new_node is a whole number: # exists
+			T[a,y,c,e] = T[a,b,c-1,e] U new_node)
+Set all other entries to Null
+Return T
+'''
+
+from utils import *
+T = {}
+
+def get_1_cover(a, b, debug=False):
+    shift_length = len("{:b}".format(a ^ b)) if a != b else 0
+    node = a >> shift_length
+    if debug:
+        print(f"Node: {node}")
+        print(f"a: {a}, b: {b}")
+    return node
+
+def initialize(d):
+    for a in range(2**(d-1),2**d):
+        for b in range(a,2**d):
+            overcover_nodes = [get_1_cover(a,b)]
+            if get_max_descendant(overcover_nodes[0],(2**d)-1) == b:
+                e = get_number_overhead_nodes(a,b,(2**d)-1,overcover_nodes)
+                T[(a,b,1,e)] = overcover_nodes
+
+def BuildTable(c,d):
+    #1. Find all existing entries of c-1
+    c_minus_1_entries = [key for key in T.keys() if key[2] == c-1]
+    for entry in c_minus_1_entries:
+        a,b,e = entry[0],entry[1],entry[3]
+        total_nodes = 2 ** d-1
+        x = b + 1
+        for n in range(d):
+            y = b + 2 ** n
+            if y <= (2 ** d) - 1 and x % (2 ** n) == 0:
+                new_node = x / (2 ** n)
+                overcover = T[entry] + [new_node]
+                left_bound = get_min_descendant(overcover[0],total_nodes)
+                for a_p in range(left_bound,y+1):
+                    e = get_number_overhead_nodes(a_p,y,total_nodes,overcover)
+                    T[a_p, y, c, e] = T[entry] + [new_node]
+
+import pprint
+#initialize(5)
+#BuildTable(2,5)
+#pprint.pprint(T)
+
+def Universal(r,c,d):
+    initialize(d)
+    for i in range(2,c):
+        BuildTable(i,d)
+    e = 0
+    #pprint.pprint(T)
+    while True:
+        T_temp = {}
+        for e1 in range(e+1):
+            e2 = e-e1
+            for a in range(2 ** (d-1),2 ** d - r+1):
+
+                b = a + r -1
+                #if (a, b) in T_temp.keys(): break
+                #if a == 16 and b == 21: breakpoint()
+                for x in range(a,b+1):
+                    try:
+                        cover = None
+                        front_part = T[(a, x, c - 1, e1)]
+                        #if a == 20 and b == 23: breakpoint()
+                        if x < b:
+                            one_cov_part = [get_1_cover(x + 1, b)]
+                            e2_real = get_max_descendant(one_cov_part[0], 2 ** d - 1) - b
+                            if e2_real == e2 and get_min_descendant(one_cov_part[0],2**d-1) == x+1 :
+                                cover = front_part + one_cov_part
+                        elif b == x and e2 == 1:
+                            cover = front_part + [b]
+                        #if (a, b) in T_temp.keys(): breakpoint()
+                        T_temp[(a,b)] = [sorted([get_height(n,2**d-1) for n in cover])]
+                    except:
+                        pass
+        print(T_temp,len(T_temp) ,2 ** (d-1) - r+1)
+        if len(T_temp) >= 2 ** (d-1) - r+1:
+            profile_meaning = e+r
+            print(profile_meaning)
+            return T_temp
+        e += 1
+
+import pprint
+print(Universal(8,3,5))
