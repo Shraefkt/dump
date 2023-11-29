@@ -1,0 +1,59 @@
+from utils import *
+def calc_min_cover(a, b) -> list:
+    # base cases
+    if a == b:
+        return [a]
+    if b - a == 1 and a % 2 == 1:
+        return [a, b]
+
+    # recursive case
+    min_cover = []
+    if a % 2 == 1:
+        min_cover.append(a)
+    min_cover += calc_min_cover((a+1) // 2, (b-1) // 2) # recursive call for solving smaller problem
+    if b % 2 == 0:
+        min_cover.append(b)
+    return min_cover
+def get_1_cover(a, b, debug=False):
+    check_same_layer(a,b)
+    shift_length = len("{:b}".format(a ^ b)) if a != b else 0
+    node = a >> shift_length
+    if debug:
+        print(f"Node: {node}")
+        print(f"a: {a}, b: {b}")
+    return node
+
+def get_2_cover(node,a,b,total_nodes):
+    left = node * 2
+    right = node * 2 + 1
+    left_left = get_1_cover(a, get_max_descendant(left, total_nodes))
+    right_right = get_1_cover(get_min_descendant(right, total_nodes), b)
+    return [left_left, right_right]
+
+T = {}
+def take_overhead(elem):
+    return elem[1]
+def helper(a,b,n_cover,total_nodes):
+    if a == b: return [a]
+    if (a,b,n_cover) in T.keys():
+        return T[(n_cover,a,b)]
+    minimal_cover = calc_min_cover(a,b)
+    if len(minimal_cover) <= n_cover:
+        T[(n_cover, a, b)] = minimal_cover
+        return minimal_cover
+    if a + 1 == b:
+        T[(n_cover, a, b)] = [a,b]
+    if n_cover == 1:
+        T[(n_cover,a,b)] = [get_1_cover(a,b)]
+    elif n_cover == 2:
+        T[(n_cover, a, b)] = get_2_cover(get_1_cover(a,b),a,b,total_nodes)
+    else:
+        # can optimize by testing valid c only
+        possible_covers = []
+        for c in range(a+1,b):
+            possible_cover = helper(a,c,n_cover-1,total_nodes) + helper(c+1,b,1,total_nodes)
+            overhead = get_number_overhead_nodes(a,b,total_nodes, possible_cover)
+            possible_covers.append([possible_cover,overhead])
+        possible_covers = sorted(possible_covers,key=take_overhead)
+        T[(n_cover, a, b)] = possible_covers[0][0]
+    return T[(n_cover, a, b)]
