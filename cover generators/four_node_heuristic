@@ -1,0 +1,67 @@
+from utils import *
+from bruteforcer import get_height_profile
+import re
+
+def binary_converter(n_nodes):
+    n_nodes = list(bin(n_nodes))
+    n_nodes.pop(0)
+    n_nodes.pop(0)
+    n_nodes = ''.join(str(i) for i in n_nodes)
+    position_one = [m.start() for m in re.finditer('1', n_nodes)]
+    position_zero = [m.start() for m in re.finditer('0', n_nodes)]
+    position_one = [len(n_nodes) - i - 1 for i in position_one]
+    position_zero = [len(n_nodes) - i - 1 for i in position_zero]
+    return position_one,position_zero
+
+
+def our_4_formula(n_nodes:int,n_cover):
+    if n_nodes <= 2**(n_cover-1):
+        universal_cover = get_height_profile(n_nodes, get_depth(n_nodes)+1,n_cover, debug=False)
+        return universal_cover
+    if n_nodes%2 == 1:
+        n_nodes = n_nodes -1
+    #print(n_nodes)
+    temp = binary_converter(n_nodes)
+    position_one = temp[0]
+    position_zero = temp[1]
+    if position_zero[0] == position_one[0] -1 and position_zero[1] == position_one[0] -2:
+        duplicated = position_one[0] - 1
+        position_one.pop(0)
+        position_one = [duplicated] + [duplicated] + position_one
+    if len(position_one) > n_cover-1:
+        #print(position_one, position_zero)
+        position_zero = [x for x in position_zero if x not in position_one]
+        #print(position_one, position_zero)
+        position_one = zero_chain(position_zero, position_one)
+        position_one = position_one + [0]
+        for i in range(len(position_one)-n_cover):
+            replacement = position_one[-2] +1
+            position_zero.append(position_one[-1])
+            position_one.pop()
+            position_zero.append(position_one[-1])
+            position_one.pop()
+            position_one.append(replacement)
+        universal_cover = position_one
+    elif len(position_one) <= n_cover-1:
+        if len(position_one) <= n_cover-1:
+            for i in range(n_cover-1-len(position_one)):
+                duplicated = position_one[0] -1
+                position_one.pop(0)
+                position_one = [duplicated] + [duplicated] + position_one
+            position_one = position_one + [0]
+        else:
+            position_one = position_one + [0]
+        #print(position_one, position_zero)
+        position_zero = [x for x in position_zero if x not in position_one]
+        #print(position_one, position_zero)
+        universal_cover = zero_chain(position_zero, position_one)
+    return universal_cover
+
+
+def zero_chain(position_zero,position_one):
+    for i in range(len(position_one)):
+        if position_one[i] +1 in position_zero:
+            position_one[i] = position_one[i] +1
+            position_zero.pop(position_zero.index(position_one[i]))
+            return zero_chain(position_zero,position_one)
+    return position_one
