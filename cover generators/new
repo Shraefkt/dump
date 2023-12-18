@@ -1,4 +1,5 @@
 from utils import *
+from collections import Counter
 import numpy as np
 from operator import countOf
 import pprint
@@ -18,26 +19,34 @@ def initialize(d):
             overcover_nodes = [get_1_cover(a,b)]
             if get_max_descendant(overcover_nodes[0],(2**d)-1) == b:
                 e = get_number_overhead_nodes(a,b,(2**d)-1,overcover_nodes)
-                T[(a,b,1,e)] = overcover_nodes
+                T[(a,b,1,e)] = [overcover_nodes]
 def BuildTable(c,d):
     c_minus_1_entries = [key for key in T.keys() if key[2] == c-1]
     for entry in c_minus_1_entries:
         a,b,e = entry[0],entry[1],entry[3]
         total_nodes = 2 ** d-1
         x = b + 1
-        for n in range(d):
-            y = b + 2 ** n
-            if y <= (2 ** d) - 1 and x % (2 ** n) == 0:
-                new_node = int(x / (2 ** n))
-                overcover = T[entry] + [new_node]
-                left_bound = get_min_descendant(overcover[0],total_nodes)
-                for a_p in range(left_bound,y+1):
-                    e = int(get_number_overhead_nodes(a_p,y,total_nodes,overcover))
-                    T[a_p, y, c, e] = T[entry] + [new_node]
+        for value in T[entry]:
+            for n in range(d):
+                y = b + 2 ** n
+                if y <= (2 ** d) - 1 and x % (2 ** n) == 0:
+                    new_node = int(x / (2 ** n))
+                    overcover = value + [new_node]
+                    left_bound = get_min_descendant(overcover[0],total_nodes)
+                    for a_p in range(left_bound,y+1):
+                        e = int(get_number_overhead_nodes(a_p,y,total_nodes,overcover,debug=False))
+                        if (a_p, y, c, e) in T:
+                            #do the dip case later
+                            if value + [new_node] not in T[a_p, y, c, e]:
+                                #breakpoint()
+                                T[a_p, y, c, e].append(value + [new_node])
+                                continue
+                            continue
+                        T[a_p, y, c, e] = [value + [new_node]]
 
-
+# note to self : destroy 11, 24, 25, 23 cases
+# bound e
 def helper(r,c,d,e):
-    possible = []
     universal_cover = []
     T_universal = {}
     for a in range(2 ** (d - 1), 2 ** d - r + 1):
@@ -47,100 +56,36 @@ def helper(r,c,d,e):
             e2 = e - e1
             # print('e2', e2)
             b_extended = b + e2
-            if b_extended <= 2 ** d - 1:
+            if b_extended <= 2 ** d - 1: # b_extended stays in that layer of the tree
                 for x in range(a, b_extended):
-                    # print('x',x)
                     if (a, x, c - 1, e1) in T:
-                        front_part = T[(a, x, c - 1, e1)]
-                        one_cov_part = [get_1_cover(x + 1, b_extended)]
-                        max_descendent = get_max_descendant(one_cov_part[0], 2 ** d - 1)
-                        min_descendent = get_min_descendant(one_cov_part[0], 2 ** d - 1)
-                        # print('a:', a, 'x:', x, 'b:', b, front_part, one_cov_part, max_descendent)
-                        if max_descendent == b_extended and min_descendent == x + 1:
-                            cover = front_part + one_cov_part
-                            cover = sorted([get_height(n, 2 ** d - 1) for n in cover],reverse=True)
-                            #print('before',cover)
-                            cover = triple_checker(cover,c,possible,1)
-                            #print('cover:', cover)
-                            if (a, b) in T_universal:
-                                #print(a,b,T_universal[(a, b)])
-                                if len(cover) != 0:
-                                    for i in range(len(cover)):
-                                        if cover[i] not in T_universal[(a, b)]:
-                                            T_universal[(a, b)] = T_universal[(a, b)] + [cover[i]]
-                            else:
-                                T_universal[(a, b)] = cover
+                        for front_part in T[a, x, c - 1, e1]:
+                            one_cov_part = [get_1_cover(x + 1, b_extended)]
+                            max_descendent = get_max_descendant(one_cov_part[0], 2 ** d - 1)
+                            min_descendent = get_min_descendant(one_cov_part[0], 2 ** d - 1)
+                            # print('a:', a, 'x:', x, 'b:', b, front_part, one_cov_part, max_descendent)
+                            if max_descendent == b_extended and min_descendent == x + 1:
+                                cover = front_part + one_cov_part
+                                cover = sorted([get_height(n, 2 ** d - 1) for n in cover],reverse=True)
+                                if (a, b) in T_universal:
+                                    if cover not in T_universal[a,b]:
+                                        T_universal[(a, b)].append(cover)
+                                else:
+                                    T_universal[(a, b)] = [cover]
         if (a, b) not in T_universal:
-            #print(a, b, e, T_universal)
             # print('wtf__________')
-            e = e +1
+            e = e + 1
             return helper(r,c,d,e)
-    result = {}
-    #print(T_universal)
-    for i in T_universal:
-        cover = T_universal[i]
-        if cover not in universal_cover:
-            universal_cover = universal_cover + cover
-    #print(T_universal.values())
-    for i in T_universal:
-        temp = T_universal[i]
-        for i in range(len(temp)):
-            if temp[i] in universal_cover:
-                #print(temp[i])
-                if tuple(temp[i]) not in result:
-                    result[tuple(temp[i])] = 1
-                else:
-                    result[tuple(temp[i])] = result[tuple(temp[i])] +1
-    #print(result)
-    check_sum = 0
-    for i in result:
-        if result[i] > check_sum:
-            check_sum = result[i]
-            universal_cover = [i]
-    return universal_cover
-
-
-
-def triple_checker(temp,c,possible,repeat_count):
-    temp_original = temp[:]
-    if repeat_count > 10:
-        temp = [temp_original]
-        return temp
-    for x in range(c - 2):
-        if len(temp) < 4:
-            return [temp_original]
-        if temp.count(temp[x]) >= 3:
-            if temp[x] == 0 and temp.count(0) >= 3 and temp.count(1) + temp.count(0) == c:
-                return [temp]
-            repeated = temp[x]
-            temp.pop(x)
-            temp.pop(x)
-            temp.pop(x)
-            merge = [repeated + 1, repeated]
-            #print('2', temp)
-            for y in range(c - 3):
-                if temp[y] != 0:
-                    temp_used = [temp[y]]
-                    other = temp[:]
-                    del other[y]
-                    #print(temp)
-                    split = [temp_used[0] - 1] * 2
-                    temp_used = sorted(other + split + merge, reverse=True)
-                    #print('temp', temp_used)
-                    for z in range(c - 2):
-                        if temp_used.count(temp_used[z]) >= 4:
-                            return [temp_original]
-                    #print('temp', temp_used)
-                    if len(temp_used) != 0 and temp_used not in possible:
-                        possible = possible + [temp_used]
-                    #print('possible', possible)
-            temp.clear()
-    if len(temp) != 0 and temp not in possible:
-        possible = possible + [temp]
-    if len(possible) == 0:
-        possible = [temp_original]
-    return possible
-
+    print(T_universal)
+    black_magic = [tuple(stuff) for value in T_universal.values() for stuff in value]
+    counted_items = Counter(black_magic)
+    universal_cover = counted_items.most_common()[0][0]
+    universal_cover_len = counted_items.most_common()[0][1]
+    correct_len = 2 ** d - 2 ** (d-1) - r + 1
+    if correct_len == universal_cover_len:
+        return universal_cover
+    print("Big problem, oops")
+    breakpoint()
 def Universal(r,c):
     d = math.ceil(math.log(r,2))+2
     initialize(d)
@@ -152,7 +97,4 @@ def Universal(r,c):
     return universal_cover
 
 
-print(Universal(63,4))
-#print(triple_checker([2,0,0,0,0],5,[],1))
-'''for i in range(5,100):
-    print(i,Universal(i,5))'''
+print(Universal(54,4))
