@@ -1,0 +1,98 @@
+from utils import *
+from bruteforcer import get_height_profile
+import re
+
+
+def merge_covers(position_one,position_zero,times):
+    for i in range(times):
+        replacement = position_one[-2] + 1
+        position_zero.append(position_one[-1])
+        position_one.pop()
+        position_zero.append(position_one[-1])
+        position_one.pop()
+        position_one.append(replacement)
+    return position_one,position_zero
+
+def split_covers(position_one,times):
+    for i in range(times):
+        duplicated = position_one[0] - 1
+        position_one.pop(0)
+        position_one = [duplicated] + [duplicated] + position_one
+    return position_one
+
+def binary_converter(n_nodes,Print):
+    n_nodes = list(bin(n_nodes))
+    n_nodes.pop(0)
+    n_nodes.pop(0)
+    n_nodes = ''.join(str(i) for i in n_nodes)
+    if Print:
+        print(n_nodes)
+    position_one = [m.start() for m in re.finditer('1', n_nodes)]
+    position_zero = [m.start() for m in re.finditer('0', n_nodes)]
+    position_one = [len(n_nodes) - i - 1 for i in position_one]
+    position_zero = [len(n_nodes) - i - 1 for i in position_zero]
+    return position_one,position_zero
+
+
+def our_5_formula(n_nodes:int,n_cover,Print):
+    if n_nodes <= 2**(n_cover-1):
+        universal_cover = get_height_profile(n_nodes, get_depth(n_nodes)+1,n_cover, debug=False)
+        return universal_cover
+    if n_nodes%2 == 1:
+        n_nodes = n_nodes -1
+    if Print:
+        print(n_nodes)
+    temp = binary_converter(n_nodes,Print)
+    position_one = temp[0]
+    position_zero = temp[1]
+    #^^^converts to binary then position
+    for i in range(len(position_one)):
+        if position_zero[0] == position_one[0] -1 and position_zero[1] == position_one[0] -2:
+            position_one = split_covers(position_one,1)
+            position_zero.pop(0)
+    #^^^split if first 1 is too big
+    if len(position_one) > n_cover-1:
+        if position_one[0] - 1 != position_one[1] and position_one[0] != position_one[1]:
+            position_one = split_covers(position_one, 1)
+            temp = merge_covers(position_one, position_zero, 1)
+            position_one = temp[0]
+        position_one = zero_chain_process(position_zero, position_one, Print)
+        position_one = position_one + [0]
+        universal_cover = merge_covers(position_one,position_zero,len(position_one) - n_cover)[0]
+    #^^^merging if too many 1s
+    elif len(position_one) <= n_cover-1:
+        if len(position_one) < n_cover-1:
+            position_one = split_covers(position_one,n_cover - 1 - len(position_one))
+            position_one = position_one + [0]
+        else:
+            if position_one[0] -1 != position_one[1] and position_one[0] != position_one[1]:
+                position_one = split_covers(position_one,1)
+                temp = merge_covers(position_one,position_zero,1)
+                position_one = temp[0]
+                position_zero = temp[1]
+            position_one = position_one + [0]
+        universal_cover = sorted(zero_chain_process(position_zero, position_one,Print))
+    return universal_cover
+
+
+def zero_chain_process(position_zero,position_one,Print):
+    if Print:
+        print(position_one, position_zero)
+    position_zero = [x for x in position_zero if x not in position_one]
+    if Print:
+        print(position_one, position_zero)
+    position_one = zero_chain(position_zero,position_one)
+    return position_one
+
+def zero_chain(position_zero,position_one):
+    for i in range(len(position_one)):
+        if position_one[i] +1 in position_zero:
+            position_one[i] = position_one[i] +1
+            position_zero.pop(position_zero.index(position_one[i]))
+            return zero_chain(position_zero,position_one)
+    return position_one
+
+'''for i in range(17,100):
+    print(i,our_formula(i,5,False))'''
+
+#print(our_formula(94,5,True))
