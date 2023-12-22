@@ -56,9 +56,12 @@ def our_5_formula(n_nodes:int,n_cover,Print):
             position_one = split_covers(position_one, 1)
             temp = merge_covers(position_one, position_zero, 1)
             position_one = temp[0]
-        position_one = zero_chain_process(position_zero, position_one, Print)
+        position_one = merge_covers(position_one,position_zero,len(position_one) -n_cover +1)[0]
         position_one = position_one + [0]
-        universal_cover = merge_covers(position_one,position_zero,len(position_one) - n_cover)[0]
+        universal_cover = zero_chain_process(position_zero, position_one, Print)
+        '''position_one = zero_chain_process(position_zero, position_one, Print)
+        position_one = position_one + [0]
+        universal_cover = merge_covers(position_one,position_zero,len(position_one) - n_cover)[0]'''
     #^^^merging if too many 1s
     elif len(position_one) <= n_cover-1:
         if len(position_one) < n_cover-1:
@@ -92,7 +95,8 @@ def zero_chain(position_zero,position_one):
             return zero_chain(position_zero,position_one)
     return position_one
 
-'''for i in range(17,100):
-    print(i,our_formula(i,5,False))'''
+for i in range(17,100):
+    print(i,our_5_formula(i,5,False))
 
-#print(our_formula(94,5,True))
+
+#print(our_5_formula(62,5,True))
