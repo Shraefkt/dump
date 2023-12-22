@@ -20,7 +20,7 @@ def our_4_formula(n_nodes:int,n_cover):
         return universal_cover
     if n_nodes%2 == 1:
         n_nodes = n_nodes -1
-    #print(n_nodes)
+    #print(n_nodes,bin(n_nodes))
     temp = binary_converter(n_nodes)
     position_one = temp[0]
     position_zero = temp[1]
@@ -29,18 +29,30 @@ def our_4_formula(n_nodes:int,n_cover):
         position_one.pop(0)
         position_one = [duplicated] + [duplicated] + position_one
     if len(position_one) > n_cover-1:
+        if position_zero[0] == position_one[0] -1:
+            duplicated = position_one[0] - 1
+            position_one.pop(0)
+            position_one = [duplicated] + [duplicated] + position_one
+            for i in range(len(position_one)-n_cover+1):
+                replacement = position_one[-2] +1
+                position_zero.append(position_one[-1])
+                position_one.pop()
+                position_zero.append(position_one[-1])
+                position_one.pop()
+                position_one.append(replacement)
+        else:
+            for i in range(len(position_one)-n_cover+1):
+                replacement = position_one[-2] +1
+                position_zero.append(position_one[-1])
+                position_one.pop()
+                position_zero.append(position_one[-1])
+                position_one.pop()
+                position_one.append(replacement)
         #print(position_one, position_zero)
-        position_zero = [x for x in position_zero if x not in position_one]
-        #print(position_one, position_zero)
-        position_one = zero_chain(position_zero, position_one)
         position_one = position_one + [0]
-        for i in range(len(position_one)-n_cover):
-            replacement = position_one[-2] +1
-            position_zero.append(position_one[-1])
-            position_one.pop()
-            position_zero.append(position_one[-1])
-            position_one.pop()
-            position_one.append(replacement)
+        position_zero = [x for x in position_zero if x not in position_one]
+        position_one = zero_chain(position_zero, position_one)
+        #print(position_one, position_zero)
         universal_cover = position_one
     elif len(position_one) <= n_cover-1:
         if len(position_one) <= n_cover-1:
@@ -65,3 +77,8 @@ def zero_chain(position_zero,position_one):
             position_zero.pop(position_zero.index(position_one[i]))
             return zero_chain(position_zero,position_one)
     return position_one
+
+for i in range(9,200):
+    print(i,our_4_formula(i,4))
+
+#print(our_4_formula(46,4))
